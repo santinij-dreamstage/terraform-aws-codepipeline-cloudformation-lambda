@@ -71,10 +71,10 @@ resource "aws_codepipeline" "pipeline" {
       }
     },
     {
-      name = "Deploy"
+      name = "StagingDeploy"
 
       action {
-        name            = "CreateChangeSet"
+        name            = "StagingCreateChangeSet"
         version         = "1"
         category        = "Deploy"
         owner           = "AWS"
@@ -85,16 +85,24 @@ resource "aws_codepipeline" "pipeline" {
 
         configuration {
           ActionMode    = "CHANGE_SET_REPLACE"
-          StackName     = "${var.stack_name}"
-          ChangeSetName = "${var.stack_name}-changes"
+          StackName     = "staging-${var.stack_name}"
+          ChangeSetName = "staging-${var.stack_name}-changes"
           Capabilities  = "${var.capabilities}"
           RoleArn       = "${aws_iam_role.cf.arn}"
           TemplatePath  = "task_artifacts::${var.template_path}"
+          ParameterOverrides = <<EOF
+          {
+            "Environment":"staging",
+            "StripeConfigArn":"arn:aws:secretsmanager:us-east-1:010184000312:secret:staging/stripe_config-O7Ftb8",
+            "RdsConnectionSecretArn":"arn:aws:secretsmanager:us-east-1:010184000312:secret:rds-connection-Ys3Zma",
+            "RdsPassSecretArn":"arn:aws:secretsmanager:us-east-1:010184000312:secret:dreamstage-rds-pass-MEIahL"
+          }
+          EOF
         }
       }
 
       action {
-        name             = "DeployChangeSet"
+        name             = "StagingDeployChangeSet"
         version          = "1"
         category         = "Deploy"
         owner            = "AWS"
@@ -104,8 +112,8 @@ resource "aws_codepipeline" "pipeline" {
 
         configuration {
           ActionMode    = "CHANGE_SET_EXECUTE"
-          StackName     = "${var.stack_name}"
-          ChangeSetName = "${var.stack_name}-changes"
+          StackName     = "staging-${var.stack_name}"
+          ChangeSetName = "staging-${var.stack_name}-changes"
         }
       }
     },
